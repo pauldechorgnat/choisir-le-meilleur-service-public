@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    networks:
+      - esnet
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+
+  python-app:
+    build: ./choisir-le-meilleur-service-public  
+    container_name: choisir-le-meilleur-service-public
+    volumes:
+      - ./choisir-le-meilleur-service-public:/app
+    depends_on:
+      - elasticsearch
+    networks:
+      - esnet
+    ports:
+      - "2022:2022"  
+
+networks:
+  esnet:
+
+volumes:
+  esdata:

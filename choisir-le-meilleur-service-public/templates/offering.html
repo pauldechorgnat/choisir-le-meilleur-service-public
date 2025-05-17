@@ -1,0 +1,8 @@
+{% extends '_base.html' %}
+{% block content %}
+<div class="decision-container">
+    <h2>{{offering.location}}</h2>
+    <h3>{{offering.decision_date}}</h3>
+    {{offering.text|safe}}
+</div>
+{% endblock %}
