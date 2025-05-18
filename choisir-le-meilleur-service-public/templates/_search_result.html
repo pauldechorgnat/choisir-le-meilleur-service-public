@@ -1,9 +1,9 @@
-<div class="result-container" onclick="go_to_offering('{{doc.id}}')">
+<div class="result-container" onclick="go_to_offering('{{doc.reference}}')">
     <div class="result-jurisdiction">
-        {{doc.company}}
+        {{doc.job_title}}
     </div>
     <div class="result-date">
-        {{doc.publication_date}} - {{doc.company}}
+        {{doc.first_publication_date}} - {{doc.organization}}
     </div>
-    {{doc.name}}
+    <!-- {{doc.name}} -->
 </div>

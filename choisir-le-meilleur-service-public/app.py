@@ -1,6 +1,10 @@
 from flask import Flask, render_template, request, abort
+from elasticsearch import Elasticsearch
+from utils import parse_input, get_offering, search_offerings
 
-from mock import get_offering, search_offering, parse_input
+ELASTIC_HOST = "http://localhost:9200"
+
+elastic_search_client = Elasticsearch(ELASTIC_HOST)
 
 app = Flask(__name__)
 
@@ -12,17 +16,21 @@ def page_not_found(e):
 
 @app.get("/")
 def render_search():
+    parameters = {}
     if "page-number" in request.args:
         page_number: int = int(request.args["page-number"])
     else:
         page_number = 0
     if "search-query" in request.args:
         query_string = request.args["search-query"]
-        parameters = parse_input(query_string)
-        offerings, total = search_offering(
+        # parameters = parse_input(query_string)
+        query_string = parse_input(query_string)
+        offerings, total = search_offerings(
+            elastic_search_client=elastic_search_client,
+            query=query_string,
             page_number=page_number,
         )
-
+        # print(offerings[0])
         n_pages = total // 25
         if total % 25 > 0:
             n_pages += 1
@@ -37,8 +45,8 @@ def render_search():
     min_page = max(int(page_number) - 3, 0)
     max_page = min(n_pages, int(page_number) + 4) if n_pages else 0
 
-    if isinstance(parameters.get("jurisdiction"), list):
-        parameters["jurisdiction"] = ", ".join(parameters["jurisdiction"])
+    # if isinstance(parameters.get("jurisdiction"), list):
+    #     parameters["jurisdiction"] = ", ".join(parameters["jurisdiction"])
 
     return render_template(
         "index.html",
@@ -55,7 +63,10 @@ def render_search():
 
 @app.get("/offering/<offering_id>")
 def get_offering_page(offering_id: str):
-    offering = get_offering(offering_id=offering_id)
+    offering = get_offering(
+        elastic_search_client=elastic_search_client,
+        offering_id=offering_id,
+    )
     if offering is None:
         abort(404)
     return render_template(

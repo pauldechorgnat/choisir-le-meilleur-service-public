@@ -1,8 +1,9 @@
 {% extends '_base.html' %}
 {% block content %}
 <div class="decision-container">
-    <h2>{{offering["Intitulé du poste"]}}</h2>
-    <h3>{{offering.decision_date}}</h3>
-    {{offering.text|safe}}
+    <h2>{{offering.job_title}}</h2>
+    <h3>{{offering.organization}}</h3>
+    <h4>Date de première publication: {{offering.first_publication_date}}</h4>
+    
 </div>
 {% endblock %}
