@@ -5,28 +5,63 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
     container_name: elasticsearch
     environment:
+      - node.name=es01
       - discovery.type=single-node
-      - xpack.security.enabled=false
-      - xpack.security.transport.ssl.enabled=false
+      - bootstrap.memory_lock=true
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+    command: >
+      bash -c "
+        /usr/local/bin/docker-entrypoint.sh &
+        sleep 30 &&
+        curl -X PUT http://localhost:9200/_cluster/settings -H 'Content-Type: application/json' -d '
+        {
+          \"persistent\": {
+            \"cluster.routing.allocation.disk.threshold_enabled\": false
+          }
+        }' &&
+        wait
+      "
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
     networks:
       - esnet
-    volumes:
-      - esdata:/usr/share/elasticsearch/data
 
-  python-app:
-    build: ./choisir-le-meilleur-service-public  
-    container_name: choisir-le-meilleur-service-public
-    volumes:
-      - ./choisir-le-meilleur-service-public:/app
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    container_name: kibana
     depends_on:
       - elasticsearch
+    environment:
+      - ELASTICSEARCH_HOSTS=http://0.0.0.0:9200
+      - xpack.security.enabled=false
+      - SERVER_HOST=0.0.0.0
+    ports:
+      - "5601:5601"
     networks:
       - esnet
-    ports:
-      - "2022:2022"  
+
+  # python-app:
+  #   build: ./choisir-le-meilleur-service-public  
+  #   container_name: choisir-le-meilleur-service-public
+  #   volumes:
+  #     - ./choisir-le-meilleur-service-public:/app
+  #   depends_on:
+  #     - elasticsearch
+  #   networks:
+  #     - esnet
+  #   ports:
+  #     - "2022:2022"  
+  
 
 networks:
   esnet:
