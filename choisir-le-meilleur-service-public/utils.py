@@ -47,19 +47,31 @@ def read_offerings_from_file(file_path: str) -> list[Offering]:
 def search_documents(
     elastic_search_client: Elasticsearch,
     index_name: str,
-    query: str,
+    text_query: str,
     fields: list[str],
-) -> list[dict]:
-    body = {
-        "query": {
-            "multi_match": {
-                "query": query,
-                "fields": fields,
-            }
+    page_size: int = 10,
+    page_number: int = 0,
+) -> tuple[list[dict], int]:
+    query = {
+        "multi_match": {
+            "query": text_query,
+            "fields": fields,
         }
     }
-    res = elastic_search_client.search(index=index_name, body=body)
-    return [hit["_source"] for hit in res["hits"]["hits"]]
+    count = elastic_search_client.count(
+        index=index_name,
+        query=query,
+    )
+    res = elastic_search_client.search(
+        index=index_name,
+        query=query,
+        size=page_size,
+        from_=page_size * page_number,
+    )
+    return (
+        [hit["_source"] for hit in res["hits"]["hits"]],
+        count["count"],
+    )
 
 
 def get_document_by_id(
@@ -90,24 +102,26 @@ def get_offering(
 
 def search_offerings(
     elastic_search_client: Elasticsearch,
-    query: str,
+    text_query: str,
     index_name: str = "offerings",
     fields: list[str] = ["job_title"],
     page_number: int = 0,
 ) -> tuple[list[dict], int]:
-    offerings = search_documents(
+    offerings, total = search_documents(
         elastic_search_client=elastic_search_client,
         index_name=index_name,
-        query=query,
+        text_query=text_query,
         fields=fields,
-    )[page_number * 25 : (page_number + 1) * 25]
+        page_number=page_number,
+        page_size=20,
+    )
 
     # return [Offering(**o) for o in offerings], len(offerings)
     return sorted(
         offerings,
         key=lambda x: x["first_publication_date"],
         reverse=True,
-    ), len(offerings)
+    ), total
 
 
 def parse_input(query: str):

@@ -42,7 +42,7 @@ services:
     depends_on:
       - elasticsearch
     environment:
-      - ELASTICSEARCH_HOSTS=http://0.0.0.0:9200
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
       - xpack.security.enabled=false
       - SERVER_HOST=0.0.0.0
     ports:
@@ -50,17 +50,19 @@ services:
     networks:
       - esnet
 
-  # python-app:
-  #   build: ./choisir-le-meilleur-service-public  
-  #   container_name: choisir-le-meilleur-service-public
-  #   volumes:
-  #     - ./choisir-le-meilleur-service-public:/app
-  #   depends_on:
-  #     - elasticsearch
-  #   networks:
-  #     - esnet
-  #   ports:
-  #     - "2022:2022"  
+  python-app:
+    build: ./choisir-le-meilleur-service-public  
+    container_name: choisir-le-meilleur-service-public
+    volumes:
+      - ./choisir-le-meilleur-service-public:/app
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    networks:
+      - esnet
+    ports:
+      - "2022:2022"  
   
 
 networks:

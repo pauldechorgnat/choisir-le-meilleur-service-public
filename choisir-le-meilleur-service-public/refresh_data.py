@@ -2,8 +2,38 @@ import logging
 from elasticsearch import Elasticsearch, helpers, BadRequestError
 from models import format_data
 from utils import read_csv
+import time
 
-logging.basicConfig(level=logging.INFO)
+
+logger = logging.getLogger("search-engine-logger")
+logger.setLevel(logging.INFO)
+
+handler = logging.StreamHandler()
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+handler.setFormatter(formatter)
+
+logger.addHandler(handler)
+
+
+def wait_for_elasticsearch(
+    elastic_search_client: Elasticsearch,
+    retries: int = 30,
+):
+    for i in range(retries):
+        try:
+            health = elastic_search_client.cluster.health(
+                wait_for_status="green",
+            )
+            status = health["status"]
+            if status == "green":
+                logger.info("✅ Elasticsearch is ready!")
+                return
+            else:
+                logger.info("❌ Elasticsearch is not ready.")
+        except Exception:
+            logger.info("❌ Could not connect to Elasticsearch")
+
+        time.sleep(5)
 
 
 def count_documents(
@@ -20,30 +50,35 @@ def refresh_data(
     elastic_search_client: Elasticsearch,
     id_field: str = "id",
 ):
+    wait_for_elasticsearch(
+        elastic_search_client=elastic_search_client,
+    )
+    logger.info("Trying to create index")
+
     try:
         elastic_search_client.indices.create(
             index=index_name,
         )
     except BadRequestError:
-        logging.info("Index already exists")
+        logger.info("Index already exists")
 
     n_documents = count_documents(
         elastic_search_client=elastic_search_client,
         index_name=index_name,
     )
 
-    logging.info(f"Reading documents to insert from '{file_path}'")
+    logger.info(f"Reading documents to insert from '{file_path}'")
     documents = [format_data(d) for d in read_csv(file_path=file_path)]
-    logging.info(f"Found {len(documents)} documents to insert in {index_name} index")
+    logger.info(f"Found {len(documents)} documents to insert in {index_name} index")
 
-    logging.info(f"Found {n_documents} already in {index_name} index")
-    logging.info("Deleting documents ...")
+    logger.info(f"Found {n_documents} already in {index_name} index")
+    logger.info("Deleting documents ...")
     delete_all_documents(
         elastic_search_client=elastic_search_client,
         index_name=index_name,
     )
-    logging.info("Documents deleted")
-    logging.info("Inserting documents")
+    logger.info("Documents deleted")
+    logger.info("Inserting documents")
     insert_documents(
         elastic_search_client=elastic_search_client,
         index_name=index_name,
@@ -54,7 +89,7 @@ def refresh_data(
         elastic_search_client=elastic_search_client,
         index_name=index_name,
     )
-    logging.info(f"Found {n_documents} in {index_name} index")
+    logger.info(f"Found {n_documents} in {index_name} index")
 
 
 def create_index(
@@ -66,7 +101,7 @@ def create_index(
             index=index_name,
         )
     except BadRequestError:
-        logging.info("Index already exists")
+        logger.info("Index already exists")
 
 
 def insert_documents(
@@ -114,7 +149,7 @@ if __name__ == "__main__":
     argument_parser.add_argument(
         "--index-name",
         help="Index Name",
-        default="documents",
+        default="offerings",
     )
     argument_parser.add_argument(
         "--elastic-search-host",

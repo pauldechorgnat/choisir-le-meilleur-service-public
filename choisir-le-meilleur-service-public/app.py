@@ -1,10 +1,14 @@
 from flask import Flask, render_template, request, abort
 from elasticsearch import Elasticsearch
 from utils import parse_input, get_offering, search_offerings
+import os
+from dotenv import load_dotenv
 
-ELASTIC_HOST = "http://localhost:9200"
+load_dotenv()
 
-elastic_search_client = Elasticsearch(ELASTIC_HOST)
+ELASTICSEARCH_HOSTS = os.environ.get("ELASTICSEARCH_HOSTS")
+
+elastic_search_client = Elasticsearch(ELASTICSEARCH_HOSTS)
 
 app = Flask(__name__)
 
@@ -27,7 +31,7 @@ def render_search():
         query_string = parse_input(query_string)
         offerings, total = search_offerings(
             elastic_search_client=elastic_search_client,
-            query=query_string,
+            text_query=query_string,
             page_number=page_number,
         )
         # print(offerings[0])
